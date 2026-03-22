@@ -4,143 +4,181 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Venue Capacity Dashboard | Professional Planner</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- Pointing to specific versions for stability -->
+    <script src="https://cdn.tailwindcss.com/3.4.1"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
     <style>
-        body { background-color: #f8fafc; }
+        body { background-color: #f8fafc; font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; }
         .card { @apply bg-white p-6 rounded-xl shadow-sm border border-slate-200; }
+        
+        /* Improved Print Styles */
         @media print {
             .no-print { display: none !important; }
-            body { background-color: white; padding: 0; }
-            .card { border: 1px solid #e2e8f0; shadow: none; break-inside: avoid; }
-            .max-w-6xl { max-width: 100%; }
+            body { background-color: white; padding: 0; margin: 0; }
+            .card { border: 1px solid #e2e8f0; box-shadow: none; break-inside: avoid; margin-bottom: 1rem; }
+            .max-w-6xl { max-width: 100%; width: 100%; margin: 0; padding: 1cm; }
+            canvas { max-width: 100% !important; height: auto !important; }
+            .print-break { page-break-before: always; }
         }
+
+        /* Accessibility: Focus states */
+        input:focus { @apply ring-2 ring-indigo-500 border-transparent outline-none; }
+        button:focus-visible { @apply ring-2 ring-offset-2 ring-slate-700 outline-none; }
     </style>
 </head>
 <body class="p-4 md:p-8">
     <div class="max-w-6xl mx-auto">
-        <!-- Header -->
-        <div class="mb-8 flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <!-- Semantic Header -->
+        <header class="mb-8 flex flex-col md:flex-row md:items-center justify-between gap-4">
             <div>
                 <h1 class="text-3xl font-bold text-slate-800 tracking-tight">Venue Planner Pro</h1>
                 <p class="text-slate-500 text-sm">Professional Capacity & Space Analysis Tool</p>
             </div>
             <div class="flex gap-3 no-print">
-                <button onclick="window.print()" class="bg-slate-800 hover:bg-slate-700 text-white px-4 py-2 rounded-lg flex items-center transition-colors shadow-sm">
-                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <button 
+                    onclick="window.print()" 
+                    aria-label="Print or Save as PDF Report"
+                    class="bg-slate-800 hover:bg-slate-700 text-white px-4 py-2 rounded-lg flex items-center transition-all shadow-sm focus:ring-2 focus:ring-offset-2 focus:ring-slate-700">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 012-2H9a2 2 0 01-2 2v4h10z" />
                     </svg>
                     Print PDF Report
                 </button>
             </div>
-        </div>
+        </header>
 
-        <!-- Inputs Section (Hidden on Print) -->
-        <div class="card mb-8 no-print bg-indigo-50 border-indigo-100">
-            <h3 class="text-sm font-bold text-indigo-800 uppercase tracking-wider mb-4 flex items-center">
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4" />
-                </svg>
-                Adjust Venue Parameters
-            </h3>
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-                <div>
-                    <label class="block text-xs font-semibold text-indigo-600 mb-1">Total Square Footage</label>
-                    <input type="number" id="inputArea" value="10000" oninput="updateDashboard()" class="w-full p-2.5 border border-indigo-200 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none transition-all shadow-sm">
+        <main>
+            <!-- Inputs Section (Hidden on Print) -->
+            <section class="card mb-8 no-print bg-indigo-50 border-indigo-100" aria-labelledby="input-heading">
+                <h2 id="input-heading" class="text-sm font-bold text-indigo-800 uppercase tracking-wider mb-4 flex items-center">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4" />
+                    </svg>
+                    Adjust Venue Parameters
+                </h2>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    <div>
+                        <label for="inputArea" class="block text-xs font-semibold text-indigo-600 mb-1">Total Square Footage</label>
+                        <input type="number" id="inputArea" value="10000" min="0" oninput="updateDashboard()" class="w-full p-2.5 border border-indigo-200 rounded-lg shadow-sm" aria-required="true">
+                    </div>
+                    <div>
+                        <label for="inputStage" class="block text-xs font-semibold text-indigo-600 mb-1">Stage/Service Ratio (%)</label>
+                        <input type="number" id="inputStage" value="20" min="0" max="100" oninput="updateDashboard()" class="w-full p-2.5 border border-indigo-200 rounded-lg shadow-sm">
+                    </div>
+                    <div>
+                        <label for="inputPassage" class="block text-xs font-semibold text-indigo-600 mb-1">Passage/Safety Ratio (%)</label>
+                        <input type="number" id="inputPassage" value="9" min="0" max="100" oninput="updateDashboard()" class="w-full p-2.5 border border-indigo-200 rounded-lg shadow-sm">
+                    </div>
                 </div>
-                <div>
-                    <label class="block text-xs font-semibold text-indigo-600 mb-1">Stage/Service Ratio (%)</label>
-                    <input type="number" id="inputStage" value="20" oninput="updateDashboard()" class="w-full p-2.5 border border-indigo-200 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none transition-all shadow-sm">
-                </div>
-                <div>
-                    <label class="block text-xs font-semibold text-indigo-600 mb-1">Passage/Safety Ratio (%)</label>
-                    <input type="number" id="inputPassage" value="9" oninput="updateDashboard()" class="w-full p-2.5 border border-indigo-200 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none transition-all shadow-sm">
-                </div>
-            </div>
-        </div>
+                <p id="errorBox" class="text-red-600 text-xs mt-3 hidden" role="alert">Please enter valid positive values.</p>
+            </section>
 
-        <!-- Metric Cards -->
-        <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-6 mb-8">
-            <div class="card border-l-4 border-l-blue-500">
-                <h3 class="text-slate-500 text-xs font-bold uppercase mb-1">Net Usable</h3>
-                <p id="statUsable" class="text-2xl font-bold text-slate-800">7,100</p>
-                <span class="text-xs text-slate-400">sq. ft.</span>
-            </div>
-            <div class="card border-l-4 border-l-amber-500">
-                <h3 class="text-slate-500 text-xs font-bold uppercase mb-1">Stage Area</h3>
-                <p id="statStage" class="text-2xl font-bold text-slate-800">2,000</p>
-                <span class="text-xs text-slate-400">sq. ft.</span>
-            </div>
-            <div class="card border-l-4 border-l-indigo-500">
-                <h3 class="text-slate-500 text-xs font-bold uppercase mb-1">Circulation</h3>
-                <p id="statPassage" class="text-2xl font-bold text-slate-800">900</p>
-                <span class="text-xs text-slate-400">sq. ft.</span>
-            </div>
-            <div class="card border-l-4 border-l-emerald-500">
-                <h3 class="text-slate-500 text-xs font-bold uppercase mb-1">Theater Max</h3>
-                <p id="statTheater" class="text-2xl font-bold text-slate-800">710</p>
-                <span class="text-xs text-slate-400">guests</span>
-            </div>
-        </div>
+            <!-- Metric Cards -->
+            <section class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-6 mb-8" aria-label="Quick Stats">
+                <div class="card border-l-4 border-l-blue-500">
+                    <h3 class="text-slate-500 text-xs font-bold uppercase mb-1">Net Usable</h3>
+                    <p id="statUsable" class="text-2xl font-bold text-slate-800">7,100</p>
+                    <span class="text-xs text-slate-400">sq. ft.</span>
+                </div>
+                <div class="card border-l-4 border-l-amber-500">
+                    <h3 class="text-slate-500 text-xs font-bold uppercase mb-1">Stage Area</h3>
+                    <p id="statStage" class="text-2xl font-bold text-slate-800">2,000</p>
+                    <span class="text-xs text-slate-400">sq. ft.</span>
+                </div>
+                <div class="card border-l-4 border-l-indigo-500">
+                    <h3 class="text-slate-500 text-xs font-bold uppercase mb-1">Circulation</h3>
+                    <p id="statPassage" class="text-2xl font-bold text-slate-800">900</p>
+                    <span class="text-xs text-slate-400">sq. ft.</span>
+                </div>
+                <div class="card border-l-4 border-l-emerald-500">
+                    <h3 class="text-slate-500 text-xs font-bold uppercase mb-1">Theater Max</h3>
+                    <p id="statTheater" class="text-2xl font-bold text-slate-800">710</p>
+                    <span class="text-xs text-slate-400">guests</span>
+                </div>
+            </section>
 
-        <!-- Charts Section -->
-        <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
-            <div class="card flex flex-col">
-                <h2 class="text-lg font-bold mb-6 text-slate-800 border-b pb-2">Area Allocation</h2>
-                <div class="flex-grow relative min-h-[250px]">
-                    <canvas id="spaceChart"></canvas>
-                </div>
-            </div>
+            <!-- Charts Section -->
+            <section class="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8" aria-label="Visual Analytics">
+                <article class="card flex flex-col">
+                    <h2 class="text-lg font-bold mb-6 text-slate-800 border-b pb-2">Area Allocation</h2>
+                    <div class="flex-grow relative min-h-[250px]">
+                        <canvas id="spaceChart" role="img" aria-label="Doughnut chart showing square footage split between usable area, stage, and passages."></canvas>
+                    </div>
+                </article>
 
-            <div class="card flex flex-col">
-                <h2 class="text-lg font-bold mb-6 text-slate-800 border-b pb-2">Seating Comparison</h2>
-                <div class="flex-grow relative min-h-[250px]">
-                    <canvas id="capacityChart"></canvas>
-                </div>
-            </div>
-        </div>
+                <article class="card flex flex-col">
+                    <h2 class="text-lg font-bold mb-6 text-slate-800 border-b pb-2">Seating Comparison</h2>
+                    <div class="flex-grow relative min-h-[250px]">
+                        <canvas id="capacityChart" role="img" aria-label="Bar chart comparing guest capacity for Theater Style versus Cluster Style."></canvas>
+                    </div>
+                </article>
+            </section>
 
-        <!-- Recommendations -->
-        <div class="card bg-slate-900 text-white shadow-xl">
-            <h2 class="text-xl font-bold mb-6 flex items-center">
-                <span class="bg-blue-500 h-2 w-2 rounded-full mr-3"></span>
-                Planner Professional Insights
-            </h2>
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
-                <div class="bg-slate-800/50 p-5 rounded-xl border border-slate-700">
-                    <h4 class="font-bold text-blue-400 mb-2 flex items-center">
-                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
-                        </svg>
-                        Theater Configuration
-                    </h4>
-                    <p id="recTheater" class="text-sm text-slate-300 leading-relaxed"></p>
+            <!-- Recommendations -->
+            <section class="card bg-slate-900 text-white shadow-xl" aria-labelledby="insights-heading">
+                <h2 id="insights-heading" class="text-xl font-bold mb-6 flex items-center">
+                    <span class="bg-blue-500 h-2 w-2 rounded-full mr-3" aria-hidden="true"></span>
+                    Planner Professional Insights
+                </h2>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+                    <div class="bg-slate-800/50 p-5 rounded-xl border border-slate-700">
+                        <h4 class="font-bold text-blue-400 mb-2 flex items-center">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+                            </svg>
+                            Theater Configuration
+                        </h4>
+                        <p id="recTheater" class="text-sm text-slate-300 leading-relaxed"></p>
+                    </div>
+                    <div class="bg-slate-800/50 p-5 rounded-xl border border-slate-700">
+                        <h4 class="font-bold text-emerald-400 mb-2 flex items-center">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+                            </svg>
+                            Cluster Configuration
+                        </h4>
+                        <p id="recCluster" class="text-sm text-slate-300 leading-relaxed"></p>
+                    </div>
                 </div>
-                <div class="bg-slate-800/50 p-5 rounded-xl border border-slate-700">
-                    <h4 class="font-bold text-emerald-400 mb-2 flex items-center">
-                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
-                        </svg>
-                        Cluster Configuration
-                    </h4>
-                    <p id="recCluster" class="text-sm text-slate-300 leading-relaxed"></p>
-                </div>
-            </div>
-        </div>
+            </section>
+        </main>
 
         <footer class="mt-12 text-center text-slate-400 text-xs no-print pb-8">
-            &copy; 2024 Venue Planner Pro &bull; Generated Space Analysis Tools &bull; 
-            <a href="#" class="underline hover:text-slate-600">Documentation</a>
+            <p>&copy; 2024 Venue Planner Pro &bull; Generated Space Analysis Tools</p>
+            <nav class="mt-2">
+                <a href="https://github.com/your-repo/docs" class="underline hover:text-slate-600 focus:text-slate-600 transition-colors">Documentation</a>
+            </nav>
         </footer>
     </div>
 
     <script>
+        /**
+         * Logic moved to a structured format with error handling and validation
+         */
         let spaceChart, capacityChart;
 
         function updateDashboard() {
-            const totalArea = parseFloat(document.getElementById('inputArea').value) || 0;
-            const stageRatio = parseFloat(document.getElementById('inputStage').value) / 100;
-            const passageRatio = parseFloat(document.getElementById('inputPassage').value) / 100;
+            const errorBox = document.getElementById('errorBox');
+            const areaInput = document.getElementById('inputArea');
+            const stageInput = document.getElementById('inputStage');
+            const passageInput = document.getElementById('inputPassage');
+
+            const totalArea = parseFloat(areaInput.value);
+            const stageRatioPercent = parseFloat(stageInput.value);
+            const passageRatioPercent = parseFloat(passageInput.value);
+
+            // Input Validation
+            if (isNaN(totalArea) || isNaN(stageRatioPercent) || isNaN(passageRatioPercent) || 
+                totalArea < 0 || stageRatioPercent < 0 || passageRatioPercent < 0 || 
+                (stageRatioPercent + passageRatioPercent) > 100) {
+                errorBox.classList.remove('hidden');
+                return;
+            } else {
+                errorBox.classList.add('hidden');
+            }
+
+            const stageRatio = stageRatioPercent / 100;
+            const passageRatio = passageRatioPercent / 100;
 
             const stageArea = totalArea * stageRatio;
             const passageArea = totalArea * passageRatio;
@@ -149,17 +187,17 @@
             const theaterCap = Math.floor(usableArea / 10);
             const clusterCap = Math.floor(usableArea / 18);
 
-            // Update Stats
-            document.getElementById('statUsable').innerText = usableArea.toLocaleString();
-            document.getElementById('statStage').innerText = stageArea.toLocaleString();
-            document.getElementById('statPassage').innerText = passageArea.toLocaleString();
-            document.getElementById('statTheater').innerText = theaterCap.toLocaleString();
+            // Update UI Stats
+            document.getElementById('statUsable').textContent = usableArea.toLocaleString();
+            document.getElementById('statStage').textContent = stageArea.toLocaleString();
+            document.getElementById('statPassage').textContent = passageArea.toLocaleString();
+            document.getElementById('statTheater').textContent = theaterCap.toLocaleString();
 
-            // Update Text
-            document.getElementById('recTheater').innerText = `Calculating at 10 sq. ft. per person, this venue supports up to ${theaterCap.toLocaleString()} guests. Recommended for seminars, AGMs, and presentations where floor efficiency is primary.`;
-            document.getElementById('recCluster').innerText = `Using 18 sq. ft. per person for 5-foot rounds, you can accommodate ${clusterCap.toLocaleString()} guests. This allows for approx. ${Math.floor(clusterCap/10)} tables with standard service aisles.`;
+            // Update Textual Descriptions
+            document.getElementById('recTheater').textContent = `Calculating at 10 sq. ft. per person, this venue supports up to ${theaterCap.toLocaleString()} guests. Recommended for seminars, AGMs, and presentations where floor efficiency is primary.`;
+            document.getElementById('recCluster').textContent = `Using 18 sq. ft. per person for 5-foot rounds, you can accommodate ${clusterCap.toLocaleString()} guests. This allows for approx. ${Math.floor(clusterCap/10)} tables with standard service aisles.`;
 
-            // Update Charts with defensive check
+            // Update Charts
             if (spaceChart) {
                 spaceChart.data.datasets[0].data = [usableArea, stageArea, passageArea];
                 spaceChart.update();
@@ -171,7 +209,10 @@
             }
         }
 
-        window.onload = function() {
+        /**
+         * Initial Setup
+         */
+        document.addEventListener('DOMContentLoaded', function() {
             const spaceCtx = document.getElementById('spaceChart').getContext('2d');
             spaceChart = new Chart(spaceCtx, {
                 type: 'doughnut',
@@ -221,8 +262,9 @@
                 }
             });
             
+            // Initial render
             updateDashboard();
-        }
+        });
     </script>
 </body>
 </html>
